@@ -12,6 +12,9 @@ set_bootloader() {
 		grub2)
 			set_bootloader_grub2
 			;;
+		systemd-boot)
+			set_bootloader_systemd_boot
+			;;
 		no)
 			print_info 1 "--no-bootloader set; Skipping bootloader update ..."
 			;;
@@ -188,4 +191,34 @@ set_bootloader_grub_duplicate_default() {
 	cp "${GRUB_CONF}" "${GRUB_CONF}.bak"
 	cp "${GRUB_CONF_TMP}" "${GRUB_CONF}"
 	rm "${GRUB_CONF_TMP}"
+}
+
+set_bootloader_systemd_boot() {
+	
+	bootctl --path=${BOOTDIR} install
+
+	# Now fill the bootloader config
+	local GENTOO_BOOT_CONF
+	local LOADER_CONF
+	local ROOTFS
+	
+	GENTOO_BOOT_CONF="${BOOTDIR}/loader/entries/gentoo.conf"
+	LOADER_CONF="${BOOTDIR}/loader/loader.conf"
+	ROOTFS="set_bootloader_read_fstab() | cut -d ' ' -f1"
+	
+	cat > GENTOO_BOOT_CONF << EOF
+	title	Gentoo Linux
+	efi	/${GK_FILENAME_KERNEL}
+	options	initrd=/${GK_FILENAME_INITRAMFS} root=${ROOTFS} init=/usr/lib/systemd/systemd rw
+	EOF
+
+	# Now tell the bootloader which os to run (Gentoo)
+
+	local BOOT_CONF
+	BOOT_CONF="${BOOTDIR}/loader/loader.conf"
+
+	cat > BOOT_CONF << EOF
+	default	gentoo
+	timeout	3
+	EOF
 }
